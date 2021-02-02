@@ -1,17 +1,17 @@
-#define subscribersCount  2
+#define subscribersCount  1
 
 mtype:subscription = {SUBSCRIBED, UNSUBSCRIBED}
 mtype:subscription subscribersStatus[subscribersCount];
 
 mtype:subscriberRequest = {ENROLL, RELEASE}
-chan request = [subscribersCount] of {short, mtype:subscriberRequest};
+chan request = [5] of {short, mtype:subscriberRequest};
 
 mtype:publisherResponse = {ACCEPT, REJECT}
-chan response = [subscribersCount] of {short, mtype:publisherResponse};
+chan response = [5] of {short, mtype:publisherResponse};
 
 chan publisherChannel[subscribersCount] = [0] of {int}
 
-bool canRelease = false;
+bool canRelease = true;
 
 int timeCounter;
 
@@ -67,11 +67,9 @@ proctype enroll(short id){
                 printf("Subsriber %d enrolled!", id);
                 
                 if
-                :: canRelease == true -> run release(id);
-                :: else;
+                :: canRelease == true -> run release(id); break;
+                :: else -> break;;
                 fi
-                
-                break;
             :: else -> 
                 printf("Error while enrolling subsriber %d", id);
             fi
