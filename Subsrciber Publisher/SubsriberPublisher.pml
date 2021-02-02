@@ -1,4 +1,4 @@
-#define subscribersCount  1
+#define subscribersCount  2
 
 mtype:subscription = {SUBSCRIBED, UNSUBSCRIBED}
 mtype:subscription subscribersStatus[subscribersCount];
@@ -11,7 +11,7 @@ chan response[subscribersCount] = [1] of {mtype:publisherResponse};
 
 chan publisherChannel[subscribersCount] = [0] of {int}
 
-bool canRelease = false;
+bool canRelease = true;
 
 int timeCounter;
 
@@ -86,26 +86,29 @@ proctype release(short id){
     fi
 }
 
-proctype subscriptionManager(short id){
+proctype subscriptionManager(){
     mtype:subscriberRequest req;
 
-    run subscriber(id);
-
+    int id = 0;
     do
-    :: request[id] ? req -> 
-        if
-        :: req == ENROLL ->
+    :: id < subscribersCount -> 
+        request[id] ? req -> 
             if
-            :: subscribersStatus[id] == UNSUBSCRIBED ->
-                response[id] ! ACCEPT;
-            :: else -> response[id] ! REJECT;
+            :: req == ENROLL ->
+                if
+                :: subscribersStatus[id] == UNSUBSCRIBED ->
+                    response[id] ! ACCEPT;
+                :: else -> response[id] ! REJECT;
+                fi
+            :: req == RELEASE ->
+                if
+                :: subscribersStatus[id] == SUBSCRIBED -> response[id] ! ACCEPT;
+                :: else -> response[id] ! REJECT;
+                fi
             fi
-        :: req == RELEASE ->
-            if
-            :: subscribersStatus[id] == SUBSCRIBED -> response[id] ! ACCEPT;
-            :: else -> response[id] ! REJECT;
-            fi
-        fi
+        
+        id++;
+    :: id >= subscribersCount -> id = 0;
     od
 }
 
@@ -129,7 +132,8 @@ init{
         int i = 0;
         do
         :: i < subscribersCount ->
-            run subscriptionManager(i);
+            run subscriptionManager();
+            run subscriber(i);
             i++;
         :: i >= subscribersCount -> break;
         od
