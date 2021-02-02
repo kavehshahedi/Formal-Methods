@@ -1,15 +1,17 @@
-#define subscribersCount  5
+#define subscribersCount  2
 
 mtype:subscription = {SUBSCRIBED, UNSUBSCRIBED}
 mtype:subscription subscribersStatus[subscribersCount];
 
 mtype:subscriberRequest = {ENROLL, RELEASE}
-chan requests[subscribersCount] = [subscribersCount] of {mtype:subscriberRequest};
+chan request = [subscribersCount] of {short, mtype:subscriberRequest};
 
 mtype:publisherResponse = {ACCEPT, REJECT}
-chan responses[subscribersCount] = [subscribersCount] of {mtype:publisherResponse};
+chan response = [subscribersCount] of {short, mtype:publisherResponse};
 
 chan publisherChannel[subscribersCount] = [0] of {int}
+
+bool canRelease = false;
 
 int timeCounter;
 
@@ -19,7 +21,7 @@ proctype publisher(){
     :: true ->
         if
         :: ((timeCounter >= 3) && (timeCounter % 2 == 1)) -> 
-            int i;
+            int i = 0;
             do
             :: i < subscribersCount ->
                 if
@@ -41,6 +43,8 @@ proctype publisher(){
 proctype subscriber(short id){
     subscribersStatus[id] = UNSUBSCRIBED;
 
+    run enroll(id);
+
     int message;
     do
     :: publisherChannel[id] ? message -> 
@@ -49,54 +53,79 @@ proctype subscriber(short id){
 }
 
 proctype enroll(short id){
-    mtype:publisherResponse response;
+    mtype:publisherResponse result;
+    short index;
 
     do
-    :: subscribersStatus[id] == UNSUBSCRIBED -> requests[id] ! ENROLL;
-    :: responses[id] ? response -> 
+    :: subscribersStatus[id] == UNSUBSCRIBED -> request ! id,ENROLL;
+    :: response ? index,result -> 
         if
-        :: response == ACCEPT -> 
-            subscribersStatus[id] = SUBSCRIBED;
-            printf("Subsriber %d enrolled!", id);
-            break;
-        :: else -> 
-            printf("Error while enrolling subsriber %d", id);
+        :: index == id ->
+            if
+            :: result == ACCEPT -> 
+                subscribersStatus[id] = SUBSCRIBED;
+                printf("Subsriber %d enrolled!", id);
+                
+                if
+                :: canRelease == true -> run release(id);
+                :: else;
+                fi
+                
+                break;
+            :: else -> 
+                printf("Error while enrolling subsriber %d", id);
+            fi
+        :: else -> skip;
         fi
     od
 }
 
 proctype release(short id){
-    mtype:publisherResponse response;
+    mtype:publisherResponse result;
+    short index;
 
     do
-    :: subscribersStatus[id] == SUBSCRIBED -> requests[id] ! RELEASE;
-    :: responses[id] ? response -> 
+    :: subscribersStatus[id] == SUBSCRIBED -> request ! id,RELEASE;
+    :: response ? index,result -> 
         if
-        :: response == ACCEPT -> 
-            subscribersStatus[id] = UNSUBSCRIBED;
-            printf("Subsriber %d released!", id);
-            break;
+        :: index == id ->
+            if
+            :: result == ACCEPT -> 
+                subscribersStatus[id] = UNSUBSCRIBED;
+                printf("Subsriber %d released!", id);
+                run enroll(id);
+                break;
+            :: else -> 
+                printf("Error while releasing subsriber %d", id);
+            fi
         :: else -> skip;
         fi
     od
 }
 
 proctype subscriptionManager(short id){
-    mtype:subscriberRequest request;
+    mtype:subscriberRequest req;
+    short index;
+
+    run subscriber(id);
 
     do
-    :: requests[id] ? request -> 
+    :: request ? index,req -> 
         if
-        :: request == ENROLL ->
+        :: index == id -> 
             if
-            :: subscribersStatus[id] == UNSUBSCRIBED -> responses[id] ! ACCEPT;
-            :: else -> responses[id] ! REJECT;
+            :: req == ENROLL ->
+                if
+                :: subscribersStatus[id] == UNSUBSCRIBED -> response ! id,ACCEPT;
+                :: else -> response ! id,REJECT;
+                fi
+            :: req == RELEASE ->
+                if
+                :: subscribersStatus[id] == SUBSCRIBED -> response ! id,ACCEPT;
+                :: else -> response ! id,REJECT;
+                fi
             fi
-        :: request == RELEASE ->
-            if
-            :: subscribersStatus[id] == SUBSCRIBED -> responses[id] ! ACCEPT;
-            :: else -> responses[id] ! REJECT;
-            fi
+        :: else -> skip;
         fi
     od
 }
@@ -107,6 +136,10 @@ proctype timer(){
     od
 }
 
+proctype test(int id, in, out){
+    printf("%d", id);
+}
+
 init{
     timeCounter = 0;
 
@@ -114,12 +147,10 @@ init{
         run timer();
         run publisher();
         
-        int i;
+        int i = 0;
         do
         :: i < subscribersCount ->
             run subscriptionManager(i);
-            run subscriber(i);
-            run enroll(i);
             i++;
         :: i >= subscribersCount -> break;
         od
