@@ -17,19 +17,21 @@ bool canCheckLTL;
 
 int sentSubscribersCounter;
 int enrolledSubscribers;
+int lastSavedEnrolledSubscribers;
 
-bool canRelease = true;
+bool canRelease = false;
 
 int timeCounter;
 
 proctype publisher(){
-    bit message;
+    int message = 10;
     do
     :: true ->
         if
         :: ((timeCounter >= 3) && (timeCounter % 2 == 1)) -> 
             canCheckLTL = false;
             sentSubscribersCounter = 0;
+            lastSavedEnrolledSubscribers = enrolledSubscribers;
 
             int i = 0;
             do
@@ -47,8 +49,6 @@ proctype publisher(){
 
             currentMessage = message;
             canCheckLTL = true;
-
-            message = 1 - message;
         :: else -> skip;
         fi
     od
@@ -78,6 +78,7 @@ proctype enroll(short id){
         if
         :: result == ACCEPT -> 
             subscribersStatus[id] = SUBSCRIBED;
+            enrolledSubscribers++;
         :: else 
         fi
     od
@@ -112,7 +113,6 @@ proctype subscriptionManager(){
                 if
                 :: subscribersStatus[id] == UNSUBSCRIBED ->
                     response[id] ! ACCEPT;
-                    enrolledSubscribers++;
                 :: else -> response[id] ! REJECT;
                 fi
             :: req == RELEASE ->
@@ -155,5 +155,13 @@ init{
 }
 
 ltl safety {
-    [] ((canCheckLTL == true) -> (sentSubscribersCounter == enrolledSubscribers))
+    [] ((canCheckLTL == true) -> (sentSubscribersCounter == lastSavedEnrolledSubscribers))
+}
+
+ltl liveness1{
+    []((canCheckLTL == true) -> (subscribersMessage[0] == currentMessage))
+}
+
+ltl liveness2{
+    []((canCheckLTL == true) -> (subscribersMessage[1] == currentMessage))
 }
