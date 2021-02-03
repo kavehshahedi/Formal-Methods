@@ -155,5 +155,5 @@ init{
 }
 
 ltl safety {
-    [] ((canCheckLTL == true) -> (sentSubscribersCounter == 2))
+    [] ((canCheckLTL == true) -> (sentSubscribersCounter == enrolledSubscribers))
 }

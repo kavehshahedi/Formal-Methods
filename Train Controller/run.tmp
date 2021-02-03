@@ -1,35 +1,31 @@
+pan: ltl formula safety_lowered
+pan:1: assertion violated  !( !(( !((GateStatus==3))||((SignalStatus==2)&&(TrainStatus==2))))) (at depth 10)
+pan: wrote TrainController.pml.trail
 
 (Spin Version 6.5.1 -- 20 December 2019)
+Warning: Search not completed
 	+ Partial Order Reduction
 
 Full statespace search for:
-	never claim         	- (not selected)
-	assertion violations	+
-	cycle checks       	- (disabled by -DSAFETY)
-	invalid end states	+
+	never claim         	+ (safety_lowered)
+	assertion violations	+ (if within scope of claim)
+	acceptance   cycles 	+ (fairness disabled)
+	invalid end states	- (disabled by never claim)
 
-State-vector 32 byte, depth reached 21, errors: 0
-       17 states, stored
-        1 states, matched
-       18 transitions (= stored+matched)
+State-vector 40 byte, depth reached 10, errors: 1
+        6 states, stored
+        0 states, matched
+        6 transitions (= stored+matched)
         0 atomic steps
 hash conflicts:         0 (resolved)
 
 Stats on memory usage (in Megabytes):
-    0.001	equivalent memory usage for states (stored*(State-vector + overhead))
-    0.290	actual memory usage for states
+    0.000	equivalent memory usage for states (stored*(State-vector + overhead))
+    0.287	actual memory usage for states
    64.000	memory used for hash table (-w24)
     0.343	memory used for DFS stack (-m10000)
    64.539	total actual memory usage
 
 
-unreached in proctype handleRailRoadCrossing
-	TrainController.pml:18, state 14, "-end-"
-	(1 of 14 states)
-unreached in proctype getGateStatus
-	TrainController.pml:26, state 6, "-end-"
-	(1 of 6 states)
-unreached in init
-	(0 of 6 states)
 
-pan: elapsed time 0.009 seconds
+pan: elapsed time 0.001 seconds

@@ -33,10 +33,28 @@ proctype getGateStatus(){
 }
 
 init {
-    SignalStatus = RED;
-    GateStatus = OPEN;
-    TrainStatus = STOP;
+    atomic{
+        SignalStatus = RED;
+        GateStatus = OPEN;
+        TrainStatus = STOP;
+    }
     
      run handleRailRoadCrossing(); 
      run getGateStatus();
+}
+
+ltl safety_open{
+    [] ((GateStatus == OPEN) -> ((SignalStatus == RED) && (TrainStatus == STOP)))
+}
+
+ltl safety_closed{
+    [] ((GateStatus == CLOSED) -> ((SignalStatus == GREEN) && (TrainStatus == RESUME_NORMAL)))
+}
+
+ltl safety_lowered{
+    [] ((GateStatus == LOWERED) -> ((SignalStatus == YELLOW) && (TrainStatus == SLOW_DOWN)))
+}
+
+ltl safety_raised{
+    [] ((GateStatus == RAISED) -> ((SignalStatus == YELLOW) && (TrainStatus == SLOW_DOWN)))
 }
