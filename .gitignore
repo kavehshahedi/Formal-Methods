@@ -5,3 +5,8 @@
 *.p
 *.t
 *.bat
+*.trail
+*.tmp
+*.exe
+*.out
+*.sel

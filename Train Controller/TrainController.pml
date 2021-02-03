@@ -11,9 +11,16 @@ chan gateChannel = [0] of {mtype:gate, mtype:signal, mtype:train}
 proctype handleRailRoadCrossing(){
     do
     :: GateStatus == OPEN -> GateStatus = LOWERED;
-    :: GateStatus == LOWERED -> gateChannel ! LOWERED,YELLOW,SLOW_DOWN; gateChannel ! CLOSED,GREEN,RESUME_NORMAL;
+
+    :: GateStatus == LOWERED -> 
+        gateChannel ! LOWERED,YELLOW,SLOW_DOWN; 
+        gateChannel ! CLOSED,GREEN,RESUME_NORMAL;
+        
     :: GateStatus == CLOSED -> GateStatus = RAISED;
-    :: GateStatus == RAISED -> gateChannel ! RAISED,YELLOW,SLOW_DOWN; gateChannel ! OPEN,RED,STOP;
+
+    :: GateStatus == RAISED -> 
+        gateChannel ! RAISED,YELLOW,SLOW_DOWN; 
+        gateChannel ! OPEN,RED,STOP;
     od; 
 }
 
