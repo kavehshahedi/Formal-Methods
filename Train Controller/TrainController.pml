@@ -6,41 +6,58 @@ mtype:signal SignalStatus;
 mtype:gate GateStatus;
 mtype:train TrainStatus;
 
-chan gateChannel = [0] of {mtype:gate, mtype:signal, mtype:train}
+chan gateSignal
+chan signalTrainChannel = [0] of {mtype:signal, mtype:train}
+chan completeChannel = [0] of {mtype:gate, mtype:signal, mtype:train}
 
 proctype handleRailRoadCrossing(){
     do
-    :: GateStatus == OPEN -> GateStatus = LOWERED;
+    :: GateStatus == OPEN -> 
+        GateStatus = LOWERED; 
+        atomic {
+            signalTrainChannel ! YELLOW,SLOW_DOWN;
+        }
 
     :: GateStatus == LOWERED -> 
-        gateChannel ! LOWERED,YELLOW,SLOW_DOWN; 
-        gateChannel ! CLOSED,GREEN,RESUME_NORMAL;
+        completeChannel ! CLOSED,GREEN,RESUME_NORMAL;
         
-    :: GateStatus == CLOSED -> GateStatus = RAISED;
+    :: GateStatus == CLOSED -> 
+        GateStatus = RAISED; 
+        atomic {
+            signalTrainChannel ! YELLOW,SLOW_DOWN;
+        }
 
     :: GateStatus == RAISED -> 
-        gateChannel ! RAISED,YELLOW,SLOW_DOWN; 
-        gateChannel ! OPEN,RED,STOP;
-    od; 
-}
-
-proctype getGateStatus(){
-    do
-    :: atomic {
-        gateChannel ? GateStatus,SignalStatus,TrainStatus;
-    }
+        completeChannel ! OPEN,RED,STOP;
     od;
 }
 
+proctype getSignalTrainStatus(){
+    do
+    :: atomic {
+        signalTrainChannel ? SignalStatus,TrainStatus;
+    }
+    od
+}
+
+proctype getCompleteStatus(){
+    do
+    :: atomic {
+        completeChannel ? GateStatus,SignalStatus,TrainStatus;
+    }
+    od
+}
+
 init {
-    atomic{
+    atomic {
         SignalStatus = RED;
         GateStatus = OPEN;
         TrainStatus = STOP;
+
+        run handleRailRoadCrossing(); 
+        run getSignalTrainStatus();
+        run getCompleteStatus();
     }
-    
-     run handleRailRoadCrossing(); 
-     run getGateStatus();
 }
 
 ltl safety_open{
