@@ -165,9 +165,9 @@ ltl safety {
 }
 
 ltl liveness1{
-    []((canCheckLTL == true) -> (subscribersMessage[0] == currentMessage))
+    []((canCheckLTL == true && subscribersStatus[0].status == SUBSCRIBED) -> (subscribersMessage[0] == currentMessage))
 }
 
 ltl liveness2{
-    []((canCheckLTL == true) -> (subscribersMessage[1] == currentMessage))
+    []((canCheckLTL == true && subscribersStatus[1].status == SUBSCRIBED) -> (subscribersMessage[1] == currentMessage))
 }
