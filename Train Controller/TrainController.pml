@@ -6,7 +6,6 @@ mtype:signal SignalStatus;
 mtype:gate GateStatus;
 mtype:train TrainStatus;
 
-chan gateSignal
 chan signalTrainChannel = [0] of {mtype:signal, mtype:train}
 chan completeChannel = [0] of {mtype:gate, mtype:signal, mtype:train}
 
