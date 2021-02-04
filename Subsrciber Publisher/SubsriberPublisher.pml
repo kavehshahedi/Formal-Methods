@@ -1,7 +1,12 @@
 #define subscribersCount  2
 
 mtype:subscription = {SUBSCRIBED, UNSUBSCRIBED}
-mtype:subscription subscribersStatus[subscribersCount];
+
+typedef subscribersStatusTypedef{
+    mtype:subscription status;
+    int time;
+}
+subscribersStatusTypedef subscribersStatus[subscribersCount];
 
 mtype:subscriberRequest = {ENROLL, RELEASE}
 chan request[subscribersCount] = [1] of {mtype:subscriberRequest};
@@ -11,8 +16,8 @@ chan response[subscribersCount] = [1] of {mtype:publisherResponse};
 
 chan publisherChannel[subscribersCount] = [0] of {int}
 
-bit subscribersMessage[subscribersCount];
-bit currentMessage;
+int subscribersMessage[subscribersCount];
+int currentMessage;
 bool canCheckLTL;
 
 int sentSubscribersCounter;
@@ -37,7 +42,7 @@ proctype publisher(){
             do
             :: i < subscribersCount ->
                 if
-                :: subscribersStatus[i] == SUBSCRIBED -> 
+                :: (subscribersStatus[i].status == SUBSCRIBED) && (subscribersStatus[i].time < timeCounter) -> 
                     publisherChannel[i] ! message;
                     sentSubscribersCounter++;
                 :: else -> skip;
@@ -55,14 +60,14 @@ proctype publisher(){
 }
 
 proctype subscriber(short id){
-    subscribersStatus[id] = UNSUBSCRIBED;
+    subscribersStatus[id].status = UNSUBSCRIBED;
 
     atomic{
         run enroll(id);
         run release(id);
     }
 
-    bit message;
+    int message;
     do
     :: publisherChannel[id] ? message -> 
         subscribersMessage[id] = message
@@ -73,11 +78,12 @@ proctype enroll(short id){
     mtype:publisherResponse result;
 
     do
-    :: (subscribersStatus[id] == UNSUBSCRIBED) -> request[id] ! ENROLL -> 
+    :: (subscribersStatus[id].status == UNSUBSCRIBED) -> request[id] ! ENROLL -> 
         response[id] ? result -> 
         if
         :: result == ACCEPT -> 
-            subscribersStatus[id] = SUBSCRIBED;
+            subscribersStatus[id].status = SUBSCRIBED;
+            subscribersStatus[id].time = timeCounter;
             enrolledSubscribers++;
         :: else 
         fi
@@ -90,11 +96,11 @@ proctype release(short id){
     if
     :: canRelease == true -> 
         do
-        :: subscribersStatus[id] == SUBSCRIBED -> request[id] ! RELEASE -> 
+        :: subscribersStatus[id].status == SUBSCRIBED -> request[id] ! RELEASE -> 
             response[id] ? result -> 
             if
             :: result == ACCEPT -> 
-                subscribersStatus[id] = UNSUBSCRIBED;
+                subscribersStatus[id].status = UNSUBSCRIBED;
             :: else 
             fi
         od
@@ -111,13 +117,13 @@ proctype subscriptionManager(){
             if
             :: req == ENROLL ->
                 if
-                :: subscribersStatus[id] == UNSUBSCRIBED ->
+                :: subscribersStatus[id].status == UNSUBSCRIBED ->
                     response[id] ! ACCEPT;
                 :: else -> response[id] ! REJECT;
                 fi
             :: req == RELEASE ->
                 if
-                :: subscribersStatus[id] == SUBSCRIBED -> 
+                :: subscribersStatus[id].status == SUBSCRIBED -> 
                     response[id] ! ACCEPT;
                     enrolledSubscribers--;
                 :: else -> response[id] ! REJECT;
@@ -155,7 +161,7 @@ init{
 }
 
 ltl safety {
-    [] ((canCheckLTL == true) -> (sentSubscribersCounter == lastSavedEnrolledSubscribers))
+    [] ((canCheckLTL == true) -> (sentSubscribersCounter == enrolledSubscribers))
 }
 
 ltl liveness1{
